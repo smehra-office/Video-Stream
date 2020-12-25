@@ -1,8 +1,8 @@
 import React from 'react';
+import { connect } from 'react-redux';
+import { login, logout } from './actions';
 
 class GApi extends React.Component {
-
-    state = { login: null };
 
     render() {
         return <div>{this.renderLoginStatus()}</div>
@@ -15,30 +15,34 @@ class GApi extends React.Component {
                 scope: 'email'
             }).then(() => {
                 this.auth = window.gapi.auth2.getAuthInstance();
-                this.setState({ login: this.auth.isSignedIn.get() });
-                this.auth.isSignedIn.listen(() => this.getAuthStatus());
+                this.getAuthStatus(this.auth.isSignedIn.get());   //pass login status to redux store
+                this.auth.isSignedIn.listen(() => this.getAuthStatus(this.auth.isSignedIn.get()));  // subscribe for login status changes
             })
         });
     }
 
-    getAuthStatus() {
-        this.setState({ login: this.auth.isSignedIn.get() });
+    getAuthStatus(e) {
+        e === true ? this.props.login(this.auth.currentUser.get().getId()) : this.props.logout();
     }
 
-    onSignIn = () => {
+    onSignInClick = () => {
         this.auth.signIn();
     }
 
-    onSignOut = () => {
+    onSignOutClick = () => {
         this.auth.signOut();
     }
 
     renderLoginStatus() {
-        if (this.auth?.isSignedIn.get())
-            return <div className='ui red google button' onClick={this.onSignOut}>Sign Out</div>;
+        if (this.props.loginStatus)
+            return <div className='ui red google button' onClick={this.onSignOutClick}>Sign Out</div>;
         else
-            return <div className='ui green google button' onClick={this.onSignIn}>Sign In</div>
+            return <div className='ui green google button' onClick={this.onSignInClick}>Sign In</div>
     }
 }
 
-export default GApi;
+const mapStateToProps = (state) => {
+    return { loginStatus: state.authentication.loginStatus }
+}
+
+export default connect(mapStateToProps, { login, logout })(GApi);
